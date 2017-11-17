@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style type="text/css">
+    .inline {
+      display: inline-block;
+    }
+    </style>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://dimplejs.org/dist/dimple.v2.0.0.min.js"></script>
+    <script type="text/javascript">
+      function draw(data) {
+
+      /*
+        D3.js setup code
+      */
+
+          "use strict";
+          var margin = 75,
+              width = 700 - margin,
+              height = 600 - margin;
+
+          var svg = d3.select("#chart1")
+            .append("svg")
+              .attr("width", width + margin)
+              .attr("height", height + margin)
+            .append('g')
+                .attr('class','chart');
+
+          var svg2 = d3.select("#chart2")
+            .append("svg")
+              .attr("width", width + margin)
+              .attr("height", height + margin)
+            .append('g')
+                .attr('class','chart');
+
+          var svg3 = d3.select("#chart3")
+            .append("svg")
+              .attr("width", width + margin)
+              .attr("height", height + margin)
+            .append('g')
+                .attr('class','chart');
+
+         // Draw the main chart
+         /*
+           Dimple.js Chart construction code
+         */
+         svg2.append("text")
+          .attr("x", (width / 2 + 30))
+          .attr("y", margin - 27).attr("text-anchor", "middle")
+          .style("font-size", "20px").style("font-weight", "bold")
+          .text("CreditScoreRangeUpper vs. BorrowerAPR colored by ProsperRating");
+         var filteredData = dimple.filterData(data, "CreditGrade", ["AA", "A", "B", "C", "D", "E", "HR", "NC"]);
+         var bubbles = new dimple.chart(svg, filteredData);
+         var x = bubbles.addMeasureAxis("x", "BorrowerAPR");
+         //x.overrideMax = 0.4;
+         var y = bubbles.addMeasureAxis("y", "CreditScoreRangeUpper");
+         y.overrideMin = 450;
+         y.overrideMax = 850;
+         bubbles.addSeries(["Index", "CreditGrade"], dimple.plot.bubble);
+         //bubbles.addSeries(["ListingKey", "CreditGrade"], dimple.plot.line);
+         bubbles.addLegend(640, 80, 50, 300, "left");
+
+         // Set specific colours
+         bubbles.assignColor("AA", "#CCCCFF");
+         bubbles.assignColor("A", "#B2B2FF");
+         bubbles.assignColor("B", "#7F7FFF");
+         bubbles.assignColor("C", "#4C4CFF");
+         bubbles.assignColor("D", "#1919FF");
+         bubbles.assignColor("E", "#0000E5");
+         bubbles.assignColor("HR", "#0000B2");
+         bubbles.setBounds(margin - 20, margin - 20, width, height - 20);
+         bubbles.draw();
+
+// Draw second chart
+         svg.append("text")
+          .attr("x", (width / 2 + 30))
+          .attr("y", margin - 27).attr("text-anchor", "middle")
+          .style("font-size", "20px").style("font-weight", "bold")
+          .text("CreditScoreRangeUpper vs. BorrowerAPR colored by CreditGrade");
+         var filteredData2 = dimple.filterData(data, "ProsperRating..Alpha.", ["AA", "A", "B", "C", "D", "E", "HR", "NC"]);
+         var bubbles2 = new dimple.chart(svg2, filteredData2);
+         var x2 = bubbles2.addMeasureAxis("x", "BorrowerAPR");
+         //x.overrideMax = 0.4;
+         var y2 = bubbles2.addMeasureAxis("y", "CreditScoreRangeUpper");
+         y2.overrideMin = 600;
+         y2.overrideMax = 850;
+         bubbles2.addSeries(["Index", "ProsperRating..Alpha."], dimple.plot.bubble);
+         //bubbles.addSeries(["ListingKey", "CreditGrade"], dimple.plot.line);
+         //bubbles2.addLegend(1, 10, 510, 20, "right");
+         bubbles2.addLegend(640, 80, 50, 300, "left");
+
+         // Set specific colours
+         bubbles2.assignColor("AA", "#CCCCFF");
+         bubbles2.assignColor("A", "#B2B2FF");
+         bubbles2.assignColor("B", "#7F7FFF");
+         bubbles2.assignColor("C", "#4C4CFF");
+         bubbles2.assignColor("D", "#1919FF");
+         bubbles2.assignColor("E", "#0000E5");
+         bubbles2.assignColor("HR", "#0000B2");
+         bubbles2.setBounds(margin - 20, margin - 20, width, height - 20);
+         bubbles2.draw();
+/*
+         // Chart 3
+         var barChartData = [
+           { "Category": "AA", "Min": 123456789, "Height":153456789 },
+           { "Category": "A", "Min": 123456789, "Height":153456789 },
+           { "Category": "B", "Min": 123456789, "Height":153456789  },
+           { "Category": "C", "Min": 123456789, "Height":153456789  },
+           { "Category": "D", "Min": 123456789, "Height":153456789  },
+           { "Category": "E", "Min": 123456789, "Height":153456789  },
+           { "Category": "HR", "Min": 123456789, "Height":153456789  },
+           { "Category": "NC", "Min": 123456789, "Height":153456789 },
+         ]
+         var barChart = new dimple.chart(svg3, filteredData);
+         var x3 = barChart.addCategoryAxis("x", "CreditGrade");
+         //x.overrideMax = 0.4;
+         var y3 = barChart.addMeasureAxis("y", "CreditScoreRangeUpper");
+         y3.overrideMin = 600;
+         y3.overrideMax = 850;
+         floatingSeries = barChart.addSeries(null, dimple.plot.bar);
+         //bubbles.addSeries(["ListingKey", "CreditGrade"], dimple.plot.line);
+         //bubbles2.addLegend(1, 10, 510, 20, "right");
+*/
+        };
+
+      </script>
+  </head>
+<body>
+  <div>
+    <h1> What is the main factor in Prosper's two loan rating systems?</h1>
+    Prosper is a peer-to-peer lending platorm that allows people to invest
+    directly into personal loans. Initially prosper used CreditGrade and then
+    in July of 2009 they switched to ProsperRating.
+    <br> <br>
+    Loans are rated from AA (best -- most credit worthy) to HR (worst -- least credit worthy).
+  </div>
+  <div class="inline" id="chart1">
+  </div>
+  <div class="inline" id="chart2">
+  </div>
+  <div class="inline" id="chart3">
+  </div>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the TSV file
+    and pass the contents of it to the draw function
+    */
+  d3.csv("prosperLoanData200.csv", draw);
+  </script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+---
+title: "lesson3"
+output: html_document
+---
+## Load data and initial plot
+```{r}
+setwd("/Users/brianchase/R")
+library(ggplot2)
+pf <- read.csv('pseudo_facebook.tsv', sep='\t')
+qplot(x = friend_count, data = pf)
+```
+
+## limit the Axes
+```{r}
+qplot(x = friend_count, data = pf, xlim = c(0,1000))
+
+qplot(x = friend_count, data = pf) + 
+  scale_x_continuous(limits = c(0, 1000))
+```
+
+## Adjusting the bin width
+```{r}
+qplot(x = friend_count, data = pf, binwidth = 25) + 
+  scale_x_continuous(limits = c(0, 1000), breaks =seq(0,1000,50)) +
+  facet_wrap(~gender)
+```
+
+## Ommiting NA gender observations
+```{r}
+qplot(x = friend_count, data = subset(pf, !is.na(gender)), binwidth = 25) + 
+  scale_x_continuous(limits = c(0, 1000), breaks =seq(0,1000,50)) +
+  facet_wrap(~gender)
+```
+
+## Count number of males and females
+```{r}
+table(pf$gender)
+by(pf$friend_count, pf$gender, summary)
+```
+
+## Tenure (Add color to plot)
+```{r}
+qplot(x = tenure, data = pf, binwidth = 30, 
+      color = I('black'), fill = I('#099DD9'))
+
+qplot(x = tenure/365, data = pf, binwidth = .25, 
+      color = I('black'), fill = I('#F79420')) + 
+  scale_x_continuous(breaks = seq(1, 7, 1), limits = c(0, 7))
+```
+
+## Labling Plots
+```{r}
+qplot(x = tenure/365, data = pf,
+      xlab = 'Number of years using facbeook',
+      ylab = 'Number of users in sample',
+      color = I('black'), fill = I('#F79420')) + 
+  scale_x_continuous(breaks = seq(1, 7, 1), limits = c(0, 7))
+```
+
+## User Ages
+```{r}
+qplot(x = age, data = pf, binwidth = 1,
+      xlab = 'Age of users in years',
+      ylab = 'Number of users in sample',
+      color = I('black'), fill = I('#F79420')) + 
+  scale_x_continuous(breaks = seq(0,113,5))
+```
+
+## How do you find out of your x variable is continuous or discrete?
+
+## How to find out the max age using summary function
+```{r}
+summary(pf$age)
+```
+
+## Transforming Data
+```{r}
+qplot(x = age, data = pf)
+
+summary(pf$friend_count)
+
+summary(log10(pf$friend_count + 1))
+
+summary(sqrt(pf$friend_count))
+```
+
+[Create Multiple Plots in One Image Output](http://lightonphiri.org/blog/ggplot2-multiple-plots-in-one-graph-using-gridextra)
+[Add Log or Sqrt Scales to an Axis](http://docs.ggplot2.org/current/scale_continuous.html)
+[Assumptions of Linear Regression](http://en.wikipedia.org/wiki/Linear_regression#Assumptions)
+[Normal Distribution](http://en.wikipedia.org/wiki/Normal_distribution)
+
+## Student question: Use scales and multiple plots on one page and install and load gridExtra
+1. friend count
+2. friend count transformed using log10
+3. friend count transformed using sqrt
+```{r}
+# install.packages('gridExtra') 
+library(gridExtra)
+
+p1 <- qplot(x = friend_count, data = pf)
+p2 <- qplot(x = log10(friend_count+1), data = pf)
+p3 <- qplot(x = sqrt(friend_count), data = pf) 
+grid.arrange(p1, p2, p3, ncol=1)
+```
+
+[Log Transformations of Data](http://www.r-statistics.com/2013/05/log-transformations-for-skewed-and-wide-distributions-from-practical-data-science-with-r/)
+
+## Alternate solution for transforming data
+```{r}
+p1 <- ggplot(aes(x = friend_count), data = pf) + geom_histogram()
+p2 <- p1 + scale_x_log10()
+p3 <- p1 + scale_x_sqrt()
+
+grid.arrange(p1, p2, p3, ncol = 1)
+```
+
+## Frequency polygons 
+```{r}
+qplot(x = friend_count, data = subset(pf, !is.na(gender)), binwidth = 10) + 
+  scale_x_continuous(limits = c(0, 1000), breaks =seq(0,1000,50)) +
+  facet_wrap(~gender)
+
+qplot(x = friend_count, y = ..count../sum(..count..),
+      data = subset(pf, !is.na(gender)), binwidth = 10,
+      geom = 'freqpoly', color = gender) + 
+  scale_x_continuous(limits = c(0, 1000), breaks =seq(0,1000,50)) 
+```
+
+## Equiv ggplot
+```{r}
+ggplot(aes(x = friend_count, y = ..count../sum(..count..)), data = subset(pf, !is.na(gender))) +
+  geom_freqpoly(aes(color = gender), binwidth=10) + 
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 50)) +
+  xlab('Friend Count') + 
+  ylab('Percentage of users with that friend count')
+```
+
+## Testing ..density..
+```{r}
+ggplot(aes(x = friend_count, y = ..density.. ) , data = subset(pf, !is.na(gender))) +
+  geom_freqpoly(aes(color = gender), binwidth=10) + 
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 50)) +
+  xlab('Friend Count') + 
+  ylab('percentage of users in their own gender group with that friend count')
+```
+
+## Student problem: Use a freq polygon to det which gender has more ww_likes
+```{r}
+qplot(x = www_likes, data = subset(pf, !is.na(gender)), 
+      binwidth = 1, geom = 'freqpoly', color = gender) +
+  scale_x_continuous(limits = c(0, 200), breaks =seq(0,200,10)) +
+  scale_y_log10(limits = c(1,1000), breaks = seq(0,1000,1))
+summary(pf$www_likes)
+```
+
+# Provided answer
+```{r}
+qplot(x = www_likes, data = subset(pf, !is.na(gender)),
+      geom = 'freqpoly', color = gender) +
+  scale_x_continuous() +
+  scale_x_log10()
+```
+
+## Getting the sum of all likes by gender
+```{r}
+by(pf$www_likes, pf$gender, sum)
+
+```
+
+## Box Plot
+```{r}
+qplot(x = gender, y = friend_count, 
+      data = subset(pf, !is.na(gender)),
+      geom = 'boxplot', ylim = c(0, 1000))
+
+qplot(x = gender, y = friend_count, 
+      data = subset(pf, !is.na(gender)),
+      geom = 'boxplot') +
+  scale_y_continuous(limits = c(0, 1000))
+
+qplot(x = gender, y = friend_count, 
+      data = subset(pf, !is.na(gender)),
+      geom = 'boxplot') +
+  coord_cartesian(ylim = c(0, 1000))
+```
+Last one is better since it is not dropping data points
+
+
+[how to useboxplot](http://flowingdata.com/2008/02/15/how-to-read-and-use-a-box-and-whisker-plot/)
+[interquartile range or IQR](http://en.wikipedia.org/wiki/Interquartile_range)
+[Vis of IQR](http://en.wikipedia.org/wiki/File:Boxplot_vs_PDF.svg)
+[intro to descriptive stats exercise: Match box plots](https://www.udacity.com/course/viewer#!/c-ud827/l-1471748603/e-83417918/m-83664035)
+
+[how to interpret box plot](http://flowingdata.com/2008/02/15/how-to-read-and-use-a-box-and-whisker-plot/)
+
+## Zooming in on the box plot (quartile inspection)
+```{r}
+qplot(x = gender, y = friend_count, 
+      data = subset(pf, !is.na(gender)),
+      geom = 'boxplot') +
+  coord_cartesian(ylim = c(0, 250))
+
+by(pf$friend_count, pf$gender, summary)
+```
+Median is black line in the center, the 1st and 3 quartile are indicated by the box top and bottom.
+
+## Friendships intiated
+```{r}
+qplot(x = gender, y = friendships_initiated, 
+      data = subset(pf, !is.na(gender)),
+      geom = 'boxplot') +
+  coord_cartesian(ylim = c(0, 150))
+
+by(pf$friendships_initiated, pf$gender, summary)
+```
+
+## Figuring out what number of users checked in with mobile
+```{r}
+summary(pf$mobile_likes)
+
+summary(pf$mobile_likes > 0)
+
+pf$mobile_check_in <- NA
+pf$mobile_check_in <- ifelse(pf$mobile_likes > 0, 1, 0)
+pf$mobile_check_in <- factor(pf$mobile_check_in)
+summary(pf$mobile_check_in)
+```
+
+## What Portion used mobile?
+```{r}
+sum(pf$mobile_check_in == 1)/length(pf$mobile_check_in)
+```
+
+

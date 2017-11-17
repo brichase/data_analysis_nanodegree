@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style type="text/css">
+    .inline {
+      display: inline-block;
+    }
+    </style>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://dimplejs.org/dist/dimple.v2.0.0.min.js"></script>
+    <script type="text/javascript">
+      function draw(data) {
+
+      /*
+        D3.js setup code
+      */
+
+          "use strict";
+          var margin = 75,
+              width = 700 - margin,
+              height = 600 - margin;
+
+          var svg = d3.select("#chart1")
+            .append("svg")
+              .attr("width", width + margin)
+              .attr("height", height + margin)
+            .append('g')
+                .attr('class','chart');
+
+          var svg2 = d3.select("#chart2")
+            .append("svg")
+              .attr("width", width + margin)
+              .attr("height", height + margin)
+            .append('g')
+                .attr('class','chart');
+
+         // Draw the main chart
+         /*
+           Dimple.js Chart construction code
+         */
+         var filteredData = dimple.filterData(data, "CreditGrade", ["AA", "A", "B", "C", "D", "E", "HR", "NC"]);
+         var bubbles = new dimple.chart(svg, filteredData);
+         var x = bubbles.addMeasureAxis("x", "BorrowerAPR");
+         //x.overrideMax = 0.4;
+         var y = bubbles.addMeasureAxis("y", "CreditScoreRangeUpper");
+         y.overrideMin = 450;
+         y.overrideMax = 850;
+         bubbles.addSeries(["Index", "CreditGrade"], dimple.plot.bubble);
+         //bubbles.addSeries(["ListingKey", "CreditGrade"], dimple.plot.line);
+         bubbles.addLegend(1, 10, 510, 20, "right");
+
+         // Set specific colours
+         bubbles.assignColor("AA", "#CCCCFF");
+         bubbles.assignColor("A", "#B2B2FF");
+         bubbles.assignColor("B", "#7F7FFF");
+         bubbles.assignColor("C", "#4C4CFF");
+         bubbles.assignColor("D", "#1919FF");
+         bubbles.assignColor("E", "#0000E5");
+         bubbles.assignColor("HR", "#0000B2");
+         bubbles.setBounds(margin - 20, margin - 20, width, height - 20);
+         bubbles.draw();
+
+         var filteredData2 = dimple.filterData(data, "ProsperRating..Alpha.", ["AA", "A", "B", "C", "D", "E", "HR", "NC"]);
+         var bubbles2 = new dimple.chart(svg2, filteredData2);
+         var x2 = bubbles2.addMeasureAxis("x", "BorrowerAPR");
+         //x.overrideMax = 0.4;
+         var y2 = bubbles2.addMeasureAxis("y", "CreditScoreRangeUpper");
+         y2.overrideMin = 600;
+         y2.overrideMax = 850;
+         bubbles2.addSeries(["Index", "ProsperRating..Alpha."], dimple.plot.bubble);
+         //bubbles.addSeries(["ListingKey", "CreditGrade"], dimple.plot.line);
+         bubbles2.addLegend(1, 10, 510, 20, "right");
+
+         // Set specific colours
+         bubbles2.assignColor("AA", "#CCCCFF");
+         bubbles2.assignColor("A", "#B2B2FF");
+         bubbles2.assignColor("B", "#7F7FFF");
+         bubbles2.assignColor("C", "#4C4CFF");
+         bubbles2.assignColor("D", "#1919FF");
+         bubbles2.assignColor("E", "#0000E5");
+         bubbles2.assignColor("HR", "#0000B2");
+         bubbles2.setBounds(margin - 20, margin - 20, width, height - 20);
+         bubbles2.draw();
+
+
+
+
+        };
+
+      </script>
+  </head>
+<body>
+  <div class="inline" id="chart1">
+  </div>
+  <div class="inline" id="chart2">
+  </div>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the TSV file
+    and pass the contents of it to the draw function
+    */
+  d3.csv("prosperLoanData200.csv", draw);
+  </script>
+</body>
+</html>

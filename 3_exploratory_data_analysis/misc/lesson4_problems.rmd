@@ -1,0 +1,164 @@
+---
+title: "lesson4_problems"
+output: html_document
+---
+
+## Quiz: Price vs. x
+
+```{r}
+setwd("/Users/brianchase/R")
+library(ggplot2)
+?diamonds
+data("diamonds")
+ggplot(aes(x = x, y = price), data = diamonds) + geom_point()
+```
+
+## Correlations
+
+```{r}
+with(diamonds, cor.test(x, price, method = 'pearson'))
+
+with(diamonds, cor.test(y, price, method = 'pearson'))
+
+with(diamonds, cor.test(z, price, method = 'pearson'))
+```
+
+## price vs depth scatterplot
+
+```{r}
+ggplot(aes(x = depth, y = price), data = diamonds) + geom_point()
+```
+
+
+## Adjustments - price vs depth
+
+```{r}
+summary(diamonds$depth)
+
+ggplot(data = diamonds, aes(x = depth, y = price)) + 
+  geom_point(alpha = 1/100) +
+  scale_x_continuous(breaks = seq(43, 79, 2))
+```
+
+## Correlation - price and depth
+
+```{r}
+with(diamonds, cor.test(depth, price, method = 'pearson'))
+```
+
+
+## Create a scatterplot of price vs carat and omit the top 1% of price and carat values.
+```{r}
+ggplot(aes(x = carat, y = price), data = diamonds) + 
+  geom_point() +
+  xlim(0, quantile(diamonds$carat, 0.99)) +
+  ylim(0, quantile(diamonds$price, 0.99))
+```
+
+## Price vs volume
+```{r}
+diamonds$volume <- diamonds$x * diamonds$y * diamonds$z
+
+ggplot(aes(x = volume, y = price), data = diamonds) + 
+  geom_point()
+
+```
+
+COunting with plyr package (unload aftewards since plyr conflicts with dplyr)
+```{r}
+library(plyr)
+count(diamonds$volume == 0)
+detach("package:plyr", unload=TRUE)
+```
+
+## Correlation of price and valume exclude diamonds that have volume 0 or greater than or equal to 800
+```{r}
+with(subset(diamonds, volume != 0 & volume <=800), cor.test(volume, price))
+```
+
+## Adjustments - price vs volume
+```{r}
+ggplot(aes(x = volume, y = price), data = subset(diamonds, volume != 0 & volume <=800)) + 
+  geom_point(alpha = 1/30) +
+  geom_smooth(method = 'lm', color = 'red')
+```
+
+## Mean price by clarity
+```{r}
+library(dplyr)
+
+clarity_groups <- group_by(diamonds, clarity)
+diamondsByClarity <- summarise(clarity_groups,
+                          mean_price = mean(price),
+                          median_price = median(price),
+                          min_price = min(price),
+                          max_price = max(price),
+                          n = n())
+diamondsByClarity <-arrange(diamondsByClarity , clarity)
+
+head(diamondsByClarity)
+```
+
+## Bar Charts of Mean Price
+```{r}
+diamonds_by_clarity <- group_by(diamonds, clarity)
+diamonds_mp_by_clarity <- summarise(diamonds_by_clarity, mean_price = mean(price))
+
+diamonds_by_color <- group_by(diamonds, color)
+diamonds_mp_by_color <- summarise(diamonds_by_color, mean_price = mean(price))
+
+summary(diamonds_mp_by_color$mean_price)
+
+p1 <- ggplot(diamonds_mp_by_color, 
+       aes(x = diamonds_mp_by_color$color, y = diamonds_mp_by_color$mean_price)) + 
+  geom_bar(stat = "identity") + 
+  scale_y_continuous(breaks = seq(0, 5500, 500), limits = c(0, 5500))
+
+p2 <- ggplot(diamonds_mp_by_clarity, 
+       aes(x = diamonds_mp_by_clarity$clarity, y = diamonds_mp_by_clarity$mean_price)) + 
+  geom_bar(stat = "identity") 
+
+library(gridExtra)
+grid.arrange(p1,p2, ncol = 1)
+```
+
+## Gapminder example
+```{r}
+age_data <- read.csv('data_median_age.csv',header = T,check.names = F)
+
+library(tidyr)
+library(gridExtra)
+age_data[23] <- NULL
+age_data_tidyr <- gather(age_data, "year", "n", 2:22)
+
+ggplot(aes(x = as.numeric(year), y = n), data = age_data_tidyr) + 
+  geom_point(alpha = 1/5, 
+             position = position_jitter(h = 0)) +
+  geom_smooth(method = 'lm', color = 'red')
+
+with(age_data_tidyr, cor.test(as.numeric(year), n))
+
+p1 <- ggplot(aes(x = as.numeric(year), y = n), data = age_data_tidyr) + 
+  geom_point(alpha = 1/5, 
+             position = position_jitter(h = 0)) +
+  geom_smooth(method = 'lm', color = 'red')
+
+age_data_2015_17to23 <- subset(age_data, age_data$`2015` < 24)
+
+age_data_tidyr_low <- gather(age_data_2015_17to23 , "year", "n", 2:22)
+p2 <- ggplot(aes(x = as.numeric(year), y = n), data = age_data_tidyr_low) + 
+  geom_point(alpha = 1/5, 
+             position = position_jitter(h = 0)) +
+  geom_smooth(method = 'lm', color = 'red')
+
+grid.arrange(p1,p2, ncol = 1)
+
+age_data_2015_25to31 <- subset(age_data, age_data$`2015` > 25 & age_data$`2015` < 32)
+age_data_2015_25to31$`Median age`
+
+age_data_2015_36to43 <- subset(age_data, age_data$`2015` > 35 & age_data$`2015` < 44)
+age_data_2015_36to43$`Median age`
+
+
+```
+

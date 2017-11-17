@@ -1,0 +1,663 @@
+Project 5 - Prosper loan data EDA by Brian Chase
+========================================================
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+#Introduction
+
+The data I explore below is Loan Data from Prosper last updated 03/11/2014. 
+It contains 113,937 loans with 81 variables on each loan. 
+
+I picked this data set since I am interested in financial data sets and 
+the challenge of finding how to get a good return or---in this case---finding
+the highest performing loans that do not default. 
+
+It turned into a supervised machine learning problem since it hinges on
+predicting what variables are important in predicting delinquencies.
+
+In the end, I focused on the other side of the loan market. What influences 
+Borrower APR and what are the differences in the different scoring systems 
+that I discovered.
+
+I focused on variables that would describe the borrower at the time of 
+applying for the loan. For example, what is the credit score or how many 
+delinquencies did the borrower have---in contrast to data collected after the
+loan like the number of investors. 
+
+I neglected variable LoanOriginalAmount originally and if I would return to the 
+analysis, I'd explore that variable in more detail.
+
+```{r}
+setwd("/Users/brianchase/R/final_project")
+pld <- read.csv('prosperLoanData.csv')
+pld$CreditGrade <- factor(pld$CreditGrade, levels = c("","AA", "A", "B", "C",
+                                                       "D", "E", "HR", "NC"))
+pld$ProsperRating..Alpha. <- factor(pld$ProsperRating..Alpha., 
+                                    levels = c("","AA", "A", "B", "C",
+                                                       "D", "E", "HR"))
+str(pld)
+pld_clean <- pld[-c(207,387,388),]
+pld_creditgrade_subset <- head(subset(pld_clean, CreditGrade != ""), 100)
+pld_prosperrating_subset <- head(subset(pld_clean, ProsperRating..Alpha. != ""), 100)
+pld_subset <- rbind(pld_creditgrade_subset, pld_prosperrating_subset)
+
+pld_clean_proccessed <- pld_clean
+pld_clean_proccessed['NumberOfLoans'] <- rep(1, nrow(pld_clean_proccessed))
+pld_clean_proccessed['Index'] <- 1:nrow(pld_clean_proccessed)
+pld_clean_proccessed <- pld_clean_proccessed[c("Index", "NumberOfLoans", "BorrowerAPR",  "CreditScoreRangeUpper", "CreditGrade", "ProsperRating..Alpha.")]
+pld_clean_proccessed$CreditScoreCat<-cut(pld_clean_proccessed$CreditScoreRangeUpper, c(0,550,600,640,680,720,760,900))
+pld_clean_proccessed$ProsperRatingCat<-cut(pld_clean_proccessed$BorrowerAPR, c(0,0.1,0.16,0.2,0.25,0.3,0.35,0.6))
+pld_clean_proccessed <- pld_clean_proccessed[complete.cases(pld_clean_proccessed),]
+write.csv(pld_clean_proccessed, "prosperLoanDataFull.csv")
+
+
+pld_subset['NumberOfLoans'] <- rep(1, nrow(pld_subset))
+pld_subset['RatingCategory'] <- rep("", nrow(pld_subset))
+pld_subset['Index'] <- 1:nrow(pld_subset)
+
+pld_subset$RatingCategory[pld_subset$CreditGrade != ""] <- "CreditGrade"
+pld_subset$RatingCategory[pld_subset$ProsperRating..Alpha. != ""] <- "ProsperRating"
+pld_subset <- pld_subset[c("Index", "NumberOfLoans", "RatingCategory", "BorrowerAPR",  "CreditScoreRangeUpper", "CreditGrade", "ProsperRating..Alpha.")]
+
+pld_mincreditgrade <- tapply(pld_subset$BorrowerAPR, pld_subset$CreditGrade, min)
+pld_mincreditgrade
+
+pld_subset$CreditScoreCat<-cut(pld_subset$CreditScoreRangeUpper, c(0,560,600,640,680,720,760,840))
+
+pld_subset$ProsperRatingCat<-cut(pld_subset$BorrowerAPR, c(0,0.1,0.16,0.2,0.25,0.3,0.35,0.6))
+
+write.csv(pld_subset, "prosperLoanData200a.csv")
+
+pld$CreditGradeNum <- as.numeric(factor(pld$CreditGrade, levels=c("AA", "A", "B", "C",
+                                                       "D", "E", "HR", "NC")))
+
+summary(pld$CreditGrade)
+table(pld$CreditGrade)
+tapply(pld$BorrowerAPR, pld$ProsperRating..Alpha., summary)
+tapply(pld$CreditScoreRangeUpper, pld$CreditGrade, summary)
+summary(pld$ProsperRating..Alpha.)
+
+table(pld_subset$CreditScoreCat, pld_subset$CreditGrade)
+table(pld_subset$ProsperRatingCat, pld_subset$ProsperRating..Alpha.)
+
+pld_p2 <- pld_clean_proccessed %>% 
+  group_by(ProsperRating..Alpha., CreditGrade, CreditScoreCat) %>%
+  summarize(n=n())
+
+colnames(pld_p2)[4] <- "NumberOfLoans"
+write.csv(pld_p2, "prosperLoanDataSmall.csv")
+```
+
+The data includes 81 variables and 113937 observations.
+
+```{r}
+pld_12variables <- pld[c("ProsperRating..Alpha.", "ProsperRating..numeric.",
+                         "ProsperScore", "LoanStatus", "CreditGrade",
+                         "BorrowerAPR", "Term" , "ListingCategory..numeric.",
+                         "Occupation", "OpenCreditLines", 
+                         "InquiriesLast6Months", "DelinquenciesLast7Years", 
+                         "RevolvingCreditBalance", "DebtToIncomeRatio", "LoanOriginalAmount")]
+```
+
+
+# Univariate plots section
+
+```{r}
+library(ggplot2)
+qplot(x = CreditGrade, data = pld )
+summary(pld$CreditGrade)
+```
+
+A critical variable for a loan is the credit grade. Here we can see that a
+large amount of the data is unlabled. That is because they used a different
+variable after July 2009. Let's look at the 'credit grade' equivalent after
+July 2009 which is ProsperRating.
+
+```{r}
+qplot(x = ProsperRating..Alpha., data = pld )
+summary(pld$ProsperRating..Alpha.)
+```
+
+The histogram for prosper rating also has missing values. My hypothesis is
+that it is the data points that were accounted by CreditGrade. Next I'll 
+remove all the grades/ratings that have the value "" (not labeled)
+
+```{r}
+qplot(x = CreditGrade, data = subset(pld, CreditGrade != "") )
+qplot(x = ProsperRating..Alpha., 
+      data = subset(pld, ProsperRating..Alpha. != "") ) 
+```
+
+Here we see for both time periods the grade/rating with the highest frequency
+is the 'C' rating. 
+
+It also looks like the ratio to higher grade/rating is skewed toward higher 
+quality loans, but it is hard to tell since the ProsperRating variable has
+a lower ratio of AA rated loan notes. They may have also changed the
+requirements for the different classifications when they changed the variable
+name. I'd have to do more research to check if they can be compared.
+
+
+```{r}
+library(dplyr)
+#library(plyr)
+#detach("package:plyr", unload=TRUE)
+prosperrating_total <- count(subset(pld, ProsperRating..Alpha. != ""), 
+                             'ProsperRating..Alpha.')
+
+pld %>% 
+  group_by(ProsperRating..Alpha.) %>%
+  summarise(no_rows = length(ProsperRating..Alpha.),
+            ratio_pct = length(ProsperRating..Alpha.) / 
+              prosperrating_total$n * 100)
+```
+
+Here the percentage of notes above C is 41.84
+
+```{r}
+
+creditgrade_total <- count(subset(pld, CreditGrade != ""), 'CreditGrade')
+
+subset(pld, CreditGrade != "") %>% 
+  group_by(CreditGrade) %>%
+  summarise(no_rows = length(CreditGrade),
+            ratio_pct = length(CreditGrade) / creditgrade_total$n * 100)
+```
+
+And for credit grade, the notes above C is 38.73. So my visual intuition was
+correct---but the difference is not much.
+
+```{r}
+table(pld$Term)
+summary(pld$Term)
+```
+
+There are three values for Term. 12 months, 36 and 60 months
+
+```{r}
+qplot(x = LoanStatus, data = pld ) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+loanstatus_total <- count(pld, 'LoanStatus')
+
+pld %>% 
+  group_by(LoanStatus) %>%
+  summarise(no_rows = length(LoanStatus),
+            ratio_pct = length(LoanStatus) / loanstatus_total$n * 100)
+
+summary(pld$LoanStatus)
+```
+
+In the LoanStatus variable, we can see that most loans are current and the
+majority of the ended loans are completed. But there is an interesting level
+of chargedoff and defaulted loans. When you add chargedoff and Defaulted
+variable counts together, it is shy of half the completed variable count. 
+This seems to be a high number for unsecured loans. Does grade matter when
+it comes to what is completed and what is chargedoff/defaulted?
+
+
+```{r}
+qplot(x = BorrowerAPR, data = pld, binwidth = 0.01)
+summary(pld$BorrowerAPR)
+```
+
+
+```{r}
+qplot(x = ListingCategory..numeric., data = pld, binwidth = 1) +
+  scale_x_continuous(breaks = seq(0, 20, 1)) +
+  coord_flip() 
+
+listingcategory_total <- count(pld, 'ListingCategory..numeric.')
+
+pld %>% 
+  group_by(ListingCategory..numeric.) %>%
+  summarise(no_rows = length(ListingCategory..numeric.),
+            ratio_pct = length(ListingCategory..numeric.) / 
+              listingcategory_total$n * 100) %>%
+  arrange(desc(no_rows))
+```
+
+From variable explaination spreadsheet:
+"The category of the listing that the borrower selected when posting their 
+listing: 0 - Not Available, 1 - Debt Consolidation, 2 - Home Improvement,
+3 - Business, 4 - Personal Loan, 5 - Student Use, 6 - Auto, 7- Other, 
+8 - Baby&Adoption, 9 - Boat, 10 - Cosmetic Procedure, 11 - Engagement Ring, 
+12 - Green Loans, 13 - Household Expenses, 14 - Large Purchases, 
+15 - Medical/Dental, 16 - Motorcycle, 17 - RV, 18 - Taxes, 19 - Vacation, 
+20 - Wedding Loans"
+
+It looks like debt considation is by far and away the largest category. 
+After that is NA and Other. Then there is Home improvement loans and business 
+loans.
+
+```{r}
+qplot(x = Occupation, data = pld ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+summary(pld$Occupation)
+
+pld %>% 
+  group_by(Occupation) %>%
+  summarise(no_rows = length(Occupation)) %>%
+  arrange(desc(no_rows))
+```
+
+Excluding Other, the top occupations applying for loans is Professional---which 
+could encompass some of other occupations. Then the next is Computer programmer
+and exective. It'd be interesting to see if professions were skewed toward 
+different types of loans.
+
+```{r}
+qplot(x = OpenCreditLines, data = pld, binwidth = 0.1 ) + 
+  scale_x_continuous(limits = c(0, 30))
+
+summary(pld$OpenCreditLines)
+```
+
+The open credit lines peaks around 7 credit lines. The curve almost looks like
+a normal distribuition with a long tail.
+
+
+```{r}
+qplot(x = InquiriesLast6Months, data = pld) + 
+  scale_x_continuous(limits = c(0, 25), breaks = seq(0, 25, 1)) 
+
+summary(pld$InquiriesLast6Months)
+```
+
+For inquires in the last 6 months, most fall with 0 to 3. But someone did have
+105 inquires!
+
+```{r}
+qplot(x = DelinquenciesLast7Years, data = pld )
+
+summary(pld$DelinquenciesLast7Years)
+```
+
+```{r}
+qplot(x = RevolvingCreditBalance, data = pld ) +
+  scale_x_continuous(limits = c(0, 50000))
+
+summary(pld$RevolvingCreditBalance)
+```
+
+The revolving credit balance looks like a power law distubution.  
+
+```{r}
+qplot(x = DebtToIncomeRatio, data = pld ) +
+  scale_x_continuous(limits = c(0, 1))
+
+summary(pld$DebtToIncomeRatio)
+```
+
+Most loan applicants have a debt-to-incomeRatio from 0.15 to 0.25. The peak is
+around 0.25. 
+
+```{r}
+qplot(x = BorrowerAPR, data = pld, binwidth = .001) +
+  scale_x_continuous(limits = c(0.05, 0.4))
+
+qplot(x = BorrowerAPR, data = pld, binwidth = .01) +
+  scale_x_continuous(limits = c(0.05, 0.4)) +
+  facet_wrap(~ProsperRating..Alpha., scales="free_y")
+
+summary(pld$BorrowerAPR)
+```
+
+BorrowerAPR median is 21% (rounded) with a mean of 21.9%. 
+
+```{r}
+qplot(x = LoanOriginalAmount, data = pld, bins = 25) +
+  scale_x_log10()
+```
+
+LoanOriginalAmount almost looks like a normal distribution when transformed into
+a logrithmic scale---there are spikes where there are popular values.
+
+# Univariate Analysis
+
+### What is the structure of the dataset?
+There are 81 variables and 113937 observations.
+
+(worst) —————-> (best)
+
+CreditRating: HR,E,D,C,B,A,AA
+
+ProsperRating: HR,E,D,C,B,A,AA
+
+Other observations:
+* 15% of notes are in the defaulted or chargedoff loan status
+* 51% of loans are listed in the Debt Consildation category.
+* The occupation listed on loans is usually "professional"
+* Most loan applicants have a debt-to-incomeRatio from 0.15 to 0.25. The peak
+is around 0.25.
+
+
+In terms of credit score, the middle rating/grade "C" is the most frequent
+
+### What is/are the main features(s) of interest in the dataset?
+
+The main features are the CreditGrade/ProsperRating/ProsperScore
+(which one to use?!), Loan Status, and BorrowerAPR. 
+
+Lending club is a peer-to-peer lending marketplace where loan applicants are
+trying to get the lowest APR and the investors are trying to make the highest
+return---which comes down to figuring out the rate that unsecured loans will 
+written off/defaulted. 
+
+# Bivariate Plots Section
+
+```{r}
+qplot(x = ProsperScore, data = pld ) +
+  facet_wrap(~ProsperRating..Alpha., scales="free_y")
+summary(pld$ProsperScore)
+```
+
+The chart above is faceted based on the ProsperRating..Alpha variable.
+
+ProsperScore also measures the metric of risk (higher = less risk). It is
+interesting that the ProsperScores are varied for each ProsperRating. I was
+expecting that it would be a copy of ProsperRating. Why is this different?
+
+```{r}
+qplot(x = ProsperScore, data = pld ) +
+  facet_wrap(~CreditGrade, scales="free_y")
+```
+
+There are only ProsperScores during the time period after CreditGrade...
+
+```{r} 
+library(psych)
+pld_12variables_numeric <- pld_12variables[sapply(pld_12variables, is.numeric)]
+
+lowerCor(pld_12variables[sapply(pld_12variables, is.numeric)])
+corPlot(pld_12variables[sapply(pld_12variables, is.numeric)])
+
+pairs.panels(pld_12variables_numeric)
+```
+
+Going to look for the top 15 correlations for ProsperScore,
+ProsperRating..numeric., and Borrowing APR and see if there are any variables
+that I've been missing in a list.
+
+```{r}
+z <- cor(pld[, 16], pld[ , sapply(pld, is.numeric)], use = "pairwise.complete.obs")
+z <- as.data.frame(as.table(z))
+head(z[order(-abs(z$Freq)),], 15)
+```
+
+InquiriesLast6Months, CreditScoreRange, and investors variables look to be 
+variables that most likely is not derived from other variables that correlate
+well with ProsperScore.
+
+```{r}
+z <- cor(pld[, 82], pld[ , sapply(pld, is.numeric)], use = "pairwise.complete.obs")
+z <- as.data.frame(as.table(z))
+head(z[order(-abs(z$Freq)),], 20)
+```
+
+I could see that BorrowerAPR and ProsperRating..numeric. correlated highly from
+the previous tables above, so I plotted just the ProsperRating correlations and 
+sorted them. CreditScoreRange, Investors (I am guessing this means the size of 
+the loan since most people put in $25 increments to diversify---not going to 
+count this on second thought), and Inquiries (both Total and the last 6 months). 
+
+```{r}
+z <- cor(pld[, 14], pld[ , sapply(pld, is.numeric)], use = "pairwise.complete.obs")
+z <- as.data.frame(as.table(z))
+head(z[order(-abs(z$Freq)),], 20)
+```
+
+```{r}
+qplot(x = BorrowerAPR, y = InquiriesLast6Months, data = pld)
+```
+
+It looks like there are a few outliers that extend far away from the other
+points (~100 inquiries). It is interesting that there are a few vertical lines.
+I wonder why that is. I want to see if I can get a closer look at the data 
+excluding the outliers.
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = InquiriesLast6Months), data = pld) + 
+  geom_jitter(alpha = 1/25) + 
+  xlim(0.05, 0.425) +
+  ylim(0, 20)
+```
+
+People have fewer inquiries to the lower end of the BorrowerAPR range 
+(better credit), but it is rather uniform---with larger peaks in short bands at
+the very end. Also there is a strange gap around 0.36.
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = InquiriesLast6Months), data = pld) + 
+  geom_jitter(alpha = 1/5) + 
+  xlim(0.30, 0.39) +
+  ylim(0, 20)
+```
+
+There looks to be less points between x = 0.36 to 0.375. 
+
+```{r}
+qplot(x = LoanStatus, y = BorrowerAPR, 
+      data = pld,
+      geom = 'boxplot') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+The median BorrowerAPR for Completed is the lowest of the LoanStatus categories.
+They are as I would expect. The PastDue(>120 days) category is interesting 
+in that there is a larger jump in median borrower APR and a tighter range
+favoring higher APR. Could this be because the other 'less past due' notes jump 
+to Defaulted or Chargedoff through some action on the borrower and higher 
+borrowerAPR borrowers tend to negliect that action?
+
+#Bivariate Analysis
+
+###How did the feature(s) of interest vary with other features in the dataset?
+ProsperRating, BorrowerAPR, LenderYield, BorrowerRate, EstimatedLoss are highly
+correlated (greater than the absolute value of 0.85).
+
+ProsperScore, CreditScoreRangeLower/Upper are slightly less correlated 
+(greater than the absolute value of 0.65).
+
+This leads one to question which variables are derived from other variables. 
+It makes sense that they use the ProsperRating to determine the BorrowerAPR to
+a large extent and the Lender's yield obvious is critically tied to what the
+borrower pays in interest rate---unless the Prosper the platform company
+charged wildly variying rates based on a different variable.
+
+In comparing LoanStatus to the BorrowerAPR, there is lower median APR for
+completed and current loan notes when compared to the ones that are
+chargedoff/defaulted/past due.
+
+
+# Multivariate Plots Section
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = DelinquenciesLast7Years, color = CreditGrade),
+       data = subset(pld, CreditGrade != "")) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  scale_color_brewer() +
+  theme_dark()
+```
+
+Delinquencies are less for smaller BorrowerAPR as expected. However, I was 
+expecting the CreditGrade to match up with the borrower APR. There is a trend 
+for the better CreditGrade notes being lower BorrowerAPR, but there is a great
+spread and overlap.
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = DelinquenciesLast7Years, 
+           color = ProsperRating..Alpha.), 
+           data = subset(pld, ProsperRating..Alpha. != "")) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  scale_color_brewer() +
+  theme_dark()
+```
+
+This looks more like I would expect! The ProsperRatings are tightly coupled in 
+bins organized by BorrowerAPR. The Delinquencies for the last 7 years seem to
+matter most for AA and A ratings. There is some overlap of ProsperRating in the
+different BorrowerAPR bins, but it is much less than for Credit Grade.The bins 
+are a little less defined for the high APRs.
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = DelinquenciesLast7Years, color = ProsperScore), 
+       data = subset(pld, !is.na(ProsperScore))) +
+  geom_point(alpha = 0.2, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  theme_dark()
+```
+
+There is an obvious trend toward darker, lower ProsperScore for higher
+BorrowerAPR. There looks to be some overlap of Scores. Making the dots more
+transparent, we can saee the tight distribution of deliquencies in the last 7
+years for Borrower APR. 
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = CreditScoreRangeUpper, color = CreditGrade), 
+       data = subset(pld, CreditGrade != "")) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  scale_color_brewer() +
+  theme_dark()
+```
+
+This is clear from this chart that the CreditGrade is dominated by 
+CreditScoreRangeUpper (and potentially CreditScoreRangeLower). There are clear
+horizontal colored bands correlating to CreditScore bands. The HR and E 
+CreditGrades bands overlap a little. 
+
+While the BorrowerAPR is trending how I would have guessed --- AA for lower 
+BorrowerAPR and E is the highest --- there is significant overlap between 
+CreditGrades and BorrowerAPR. How would they decide what BorrowerAPR to give 
+for someone applying for a 17% loan?
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = CreditScoreRangeUpper, 
+           color = ProsperRating..Alpha.), 
+           data = subset(pld, ProsperRating..Alpha. != "")) +
+  geom_point(alpha = 0.1, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  scale_color_brewer() +
+  theme_dark()
+```
+
+Here we can see the same bands of ProsperRating binned by BorrowerAPR. Now we 
+can see how that compares to CreditScore---where there is significant overlap.
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = CreditScoreRangeUpper, color = ProsperScore), 
+       data = subset(pld, !is.na(ProsperScore))) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  theme_dark()
+```
+
+Same chart colored with ProsperScore. There is a trend of lower prosperScore
+for lower BorrowerAPR and lower CreditScore. 
+
+# Final Plots and Summary
+
+###Plot One
+
+```{r}
+# Reordering LoanStatus levels based on median BorrowerAPR
+pld2 <- pld
+LoanStatusOrdered <- subset(pld, !is.na(pld$BorrowerAPR)) %>% 
+  group_by(LoanStatus) %>%
+  summarise(BorrowMedian = median(BorrowerAPR)) %>%
+  arrange(BorrowMedian)
+
+pld2$LoanStatus <- factor(pld2$LoanStatus, levels = LoanStatusOrdered$LoanStatus) 
+
+qplot(x = LoanStatus, y = BorrowerAPR, 
+      data = pld2,
+      geom = 'boxplot') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "BorrowerAPR by Loan Status") + 
+  coord_flip()
+```
+
+###Description One
+
+Loans that are Chagedoff, Defaulted or are Past Due have higher median 
+BorrowerAPR. Completed has the lowest median and the notes that are >120 days
+past due have a slight uptick for median.
+
+###Plot Two
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = CreditScoreRangeUpper, color = CreditGrade), 
+       data = subset(pld, CreditGrade != "")) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  ylim(450, 900) +
+  labs(y = "Credit Score Range Upper", x = "Borrower APR", 
+       title = "Credit Score Range Upper by Borrower's APR faceted by 
+       CreditGrade with conditional mean lines") +
+  scale_color_brewer() +
+  geom_smooth(aes(color = CreditGrade), se = FALSE, size = 2) +
+  theme_dark() 
+```
+
+###Description Two
+
+CreditGrade colored data points falls into well-defined buckets of CreditScore
+with AA being the highest CreditScoreRangeUpper interval. In contrast, the 
+variable BorrowerAPR there is a trend of lower BorrowerAPR for higher grade 
+loan notes similar to Credit Score, but there are overlaps between the 
+CreditGrade of the loan notes.
+
+###Plot Three
+
+```{r}
+ggplot(aes(x = BorrowerAPR, y = CreditScoreRangeUpper, 
+           color = ProsperRating..Alpha.), 
+           data = subset(pld, ProsperRating..Alpha. != "")) +
+  geom_point(alpha = 0.2, size = 1, position = 'jitter') +
+  xlim(0, 0.4) +
+  labs(y = "Credit Score Range Upper", x = "Borrower APR", 
+       title = "Credit Score Range Upper by Borrower's APR faceted by 
+       ProsperScore with linear smoothed conditional mean line") +
+  scale_color_brewer() +
+  geom_smooth(aes(color = ProsperRating..Alpha.), se = FALSE, method = "lm", size = 3) +
+  theme_dark()
+```
+
+###Description Three
+
+ProsperRating colored data points falls into well defined buckets of 
+Borrower's APR with the highest rated notes AA having the lowest Borrower APR
+all the way down to HR rated loans notes having the highest Borrower APR. 
+In contrast, the CreditScoreRangeUpper variable has a trend of lower 
+BorrowerAPR for higher rated notes similar to BorrowerAPR, but there are 
+overlaps between the ProsperRating sections.
+
+# Reflection
+
+I ran into difficulties getting into the mindset to explore the data. My initial
+thought was that I was going to find some interesting patterns in the data that 
+specifically made a borrower have a good or bad APR and figure out what makes a
+loan a good canidate to be completed or default. While it was a good starting
+point, I started to realize that I needed to keep a more open mind, because I
+was litterially feeling stressed when something profound did not jump out at me.
+Looking at expected relationships is fine and can be enlightening too!
+
+I had more success when I started allowing myself to browse the data for 
+expected relationships. I felt success when I realized that CreditGrade 
+depended on the CreditScore and it was so plainly visible in the charts when 
+compared to a chart of the same with ProsperScore. That was satisfying.
+
+The analysis could be further enriched by exploring the ProsperScore and how
+that is created. Also I would like to create a classifier to figure out what 
+variables most impact whether or not a note is a "good" loan note. I tried to 
+create one in R where I binned good outcomes/most likely good outcomes and bad 
+outcomes/most likely bad outcomes (half the past due notes split in each 
+category based on how late they were), but my model crashed Rstudio and I did 
+not follow through on debugging the reason why. The weights of that model could
+open new paths to explore.

@@ -1,0 +1,251 @@
+---
+title: "lesson3_problems"
+output: html_document
+---
+
+## Load diamonds data set
+```{r}
+setwd("/Users/brianchase/R")
+library(ggplot2)
+data(diamonds)
+
+summary(diamonds)
+
+?diamonds
+
+```
+
+## Create a histogram of the price of
+## all the diamonds in the diamond data set.
+```{r}
+qplot(x = price, data = diamonds)
+```
+
+## Describe shape and center. include summary statistics like mean and median.
+```{r}
+summary(diamonds$price)
+```
+
+## DIamond counts
+How many diamonds cost less than $500
+```{r}
+sum(diamonds$price < 500)
+```
+
+How many diamonds cost less than $250
+```{r}
+sum(diamonds$price < 250)
+```
+
+How many diamonds cost more than $15000
+```{r}
+sum(diamonds$price >= 15000)
+```
+
+
+## Exploring the largest peak in the price histogram
+```{r}
+qplot(x = price, data = diamonds, binwidth=1) +
+  scale_x_continuous(limits = c(500, 1000), breaks =seq(500,1000,50))
+
+sum(diamonds$price == 605)
+```
+
+## Price by Cut histograms (use multiple panels)
+```{r}
+qplot(x = price, data = diamonds) +
+  facet_wrap(~cut)
+```
+
+## Finding lowest, highest, lowest median price based on cut
+```{r}
+by(diamonds$price, diamonds$cut, min)
+
+by(diamonds$price, diamonds$cut, max)
+
+by(diamonds$price, diamonds$cut, median)
+```
+
+## histograms with different ranges in y axis (This shows that fair and good are similar distributions)
+```{r}
+qplot(x = price, data = diamonds) +
+  facet_wrap(~cut, scales="free_y")
+```
+
+## Price per carat cut
+```{r}
+qplot(x = price/carat, data = diamonds, bins=500) +
+  facet_wrap(~cut, scales="free_y") + 
+  scale_x_log10()
+```
+
+## Investigate by color with box plot and summary
+```{r}
+qplot(x = color, y = price, 
+      data = diamonds,
+      geom = 'boxplot') +
+  coord_cartesian(ylim = c(0, 8000))
+
+by(diamonds$price, diamonds$color, summary)
+
+```
+
+What is the price range for the moiddle 50% of diamonds (color D)?
+first quartile? 911
+third quartile? 4214
+Same foar color J:
+first quartile? 1860
+third quartile? 7695
+
+What is IQR? Q3 - Q1
+
+c) IQR D color: 4214-911 = 3,303
+d) IQR J color: 7695-1860 = 5,835
+
+## Price per carat across different colors box plot
+```{r}
+qplot(x = color, y = price/carat, 
+      data = diamonds,
+      geom = 'boxplot') +
+  coord_cartesian(ylim = c(2000, 6000))
+
+by(diamonds$price / diamonds$carat, diamonds$color, summary)
+```
+
+## Carat Frequenct Polygon : What carat size has a count greater than 2000?
+```{r}
+library(gridExtra)
+
+p1 <- qplot(x = carat, data = diamonds, binwidth = 0.01,
+      geom = 'freqpoly') + 
+  scale_x_continuous(limits = c(0.3, 0.35), breaks =seq(0.3,0.35,0.01))
+
+p2 <- qplot(x = carat, data = diamonds, binwidth = 0.01,
+      geom = 'freqpoly') + 
+  scale_x_continuous(limits = c(1, 1.05), breaks =seq(0,1.05,0.01))
+
+grid.arrange(p1,p2, ncol=1)
+```
+
+tidyr -a package that reshapes the layout of your data
+
+dplyr - a package that helps you transform tidy, tabular data
+
+[Data wrangling in R presentation](https://s3.amazonaws.com/udacity-hosted-downloads/ud651/DataWranglingWithR.pdf)
+[Data wrangling cheat sheet](http://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
+[other r studio cheat sheets](http://www.rstudio.com/resources/cheatsheets/)
+
+## Load gapminder data on Median Age
+```{r}
+age_data <- read.csv('data_median_age.csv')
+
+summary(age_data$X1950)
+
+qplot(x = X1950,  
+      data = age_data, binwidth = 1) +
+  scale_x_continuous(limits = c(15, 34), breaks =seq(15,34,1))
+
+summary(age_data$X2015)
+
+qplot(x = X2015,  
+      data = age_data, binwidth = 1) +
+  scale_x_continuous(limits = c(14, 47), breaks =seq(14,47,1))
+
+```
+
+Loaded data with median ages based on countries and date (dates also include future projections)
+
+Looking at this data, I notice that there are now three group in the histogram (17-23), (25-31), (36-43)
+
+```{r}
+age_data_2015_17to23 <- subset(age_data, age_data$`2015` < 24)
+age_data_2015_17to23$`Median age`
+
+age_data_2015_25to31 <- subset(age_data, age_data$`2015` > 25 & age_data$`2015` < 32)
+age_data_2015_25to31$`Median age`
+
+age_data_2015_36to43 <- subset(age_data, age_data$`2015` > 35 & age_data$`2015` < 44)
+age_data_2015_36to43$`Median age`
+```
+
+Plotting the future projection historgram
+```{r}
+summary(age_data$X2050)
+library(gridExtra)
+
+
+p3 <- qplot(x = `X2050`,  
+      data = age_data, binwidth = 1) +
+  scale_x_continuous(limits = c(19, 57), breaks =seq(19,57,1))
+
+p2 <- qplot(x = `X1950`,  
+      data = age_data, binwidth = 1) +
+  scale_x_continuous(limits = c(19, 57), breaks =seq(19,57,1))
+
+p1 <- qplot(x = `X2015`,  
+      data = age_data, binwidth = 1) +
+  scale_x_continuous(limits = c(19, 57), breaks =seq(19,57,1))
+
+p4 <- grid.arrange(p2, p1, p3, ncol=1)
+ggsave('median_age_histograms2.png', plot = p4)
+```
+
+Finding another chart to make
+
+qplot(x =, y = ..count../sum(..count..),
+      data = subset(pf, !is.na(gender)), binwidth = 10,
+      geom = 'freqpoly', color = gender) + 
+  scale_x_continuous(limits = c(0, 1000), breaks =seq(0,1000,50)) 
+
+
+How do you create a plot with the years on the x axis and the median age on the y axis colored by country?
+```{r}
+#install.packages('tidyr', dependencies=T)
+setwd("/Users/brianchase/R")
+age_data <- read.csv('data_median_age.csv',header = T,check.names = F)
+library(tidyr)
+age_data[23] <- NULL
+age_data_tidyr <- gather(age_data, "year", "n", 2:22)
+
+qplot(x=age_data_tidyr$year, y=age_data_tidyr$n, data=age_data_tidyr,
+      geom = c('point', 'path'), color=age_data_tidyr$`Median age`) +
+  guides(color=FALSE)
+
+qplot(x=age_data_tidyr$year, y=age_data_tidyr$n, data=age_data_tidyr,
+      geom = c('point', 'path'))
+```
+
+Problem is that there are just too many countries in the data set (here I tried to get geom_line to work... turns out you need a group)
+```{r}
+
+subset_world <- subset(age_data_tidyr, `Median age` == "AFRICA" | `Median age` == "LATIN AMERICA AND THE CARIBBEAN" | `Median age` == "ASIA" | `Median age` == "EUROPE" | `Median age` == "NORTHERN AMERICA" | `Median age` == "OCEANIA" | `Median age` == "WORLD" )
+
+qplot(x=year, y=n,
+      data=subset_world,
+      color = `Median age`,
+      group = `Median age`,
+      geom = c('point', 'line')) +
+  scale_y_continuous(limits = c(17, 47), breaks =seq(17,47,1))
+
+ggsave('median_age_chart.png')
+
+summary(subset_world)
+```
+
+```{r}
+subset_world2 <- subset(age_data_tidyr, `Median age` == "Eastern Africa" | `Median age` == "Western Africa" | `Median age` == "Middle Africa" | `Median age` == "Northern Africa" | `Median age` == "Southern Africa" | `Median age` == "Sub- Saharan Africa" | `Median age` == "AFRICA" | `Median age` == "WORLD" )
+
+qplot(x=year, y=n,
+      data=subset_world2,
+      color = `Median age`,
+      group = `Median age`,
+      geom = c('point', 'line')) +
+  scale_y_continuous(limits = c(15, 39), breaks =seq(15,39,1))
+
+ggsave('median_age_chart_africa.png')
+summary(subset_world2)
+
+
+
+```
+
